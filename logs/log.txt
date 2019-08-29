@@ -1,0 +1,89 @@
+I will be using T1-w images that are in the nifti format as they best show medial temporal atrophy.
+
+First I downloaded T1-w images from OASIS3 and unzipped it.
+Then I extracted all the '*.nii.gz' to '*.nii' format: `gunzip -rN t1w-asdf/`
+
+I then downloaded all the ADRC clinical data and created a SQLITE database from the csv file:
+
+$sqlite3 /home/donbibi/Documents/AD/OASIS3_DB
+SQLite version 3.22.0 2018-01-22 18:45:57
+Enter ".help" for usage hints.
+sqlite> .mode csv
+sqlite> .import /home/donbibi/Documents/FYP/csv/clinical_data.csv subjects
+sqlite> .schema subjects
+CREATE TABLE subjects(
+  "ADRC_ADRCCLINICALDATA ID" TEXT,
+  "Subject" TEXT,
+  "Date" TEXT,
+  "Age" TEXT,
+  "mmse" TEXT,
+  "ageAtEntry" TEXT,
+  "cdr" TEXT,
+  "commun" TEXT,
+  "dx1" TEXT,
+  "dx2" TEXT,
+  "dx3" TEXT,
+  "dx4" TEXT,
+  "dx5" TEXT,
+  "homehobb" TEXT,
+  "judgment" TEXT,
+  "memory" TEXT,
+  "orient" TEXT,
+  "perscare" TEXT,
+  "apoe" TEXT,
+  "sumbox" TEXT,
+  "acsparnt" TEXT,
+  "height" TEXT,
+  "weight" TEXT,
+  "primStudy" TEXT,
+  "acsStudy" TEXT
+);
+sqlite> 
+
+
+Taking an initial look at the clinical data, we can see that the subjects have a subject ID, but each record has a unique clinical ID, which is a combination of their subject ID,
+and days from entry into the study, for e.g. A subject could have a subject ID of 'OAS30001' and each record would have a unique clinical ID for each record entry of that subject,
+like so: 'OAS30001_ClinicalData_d0339', where 'dxxxx' represents days since first entry. So it's a one to many relationship, where a subject could have more than one clinical
+sessions, hence more than once clinical IDs.
+
+Taking an initial look at the MRI images, we see that the nifti files are named in a similar way to clinical IDs, e.g.
+
+donbibi@ghost:~/Documents/FYP/t1w$ ls -lt | grep 30001
+-rw-r--r-- 1 donbibi donbibi 10184024 Nov  8  2017 sub-OAS30001_ses-d2430_T1w.nii.gz
+-rw-r--r-- 1 donbibi donbibi 10812369 Oct 30  2017 sub-OAS30001_ses-d3132_T1w.nii.gz
+-rw-r--r-- 1 donbibi donbibi 11052259 Oct 30  2017 sub-OAS30001_ses-d0757_run-02_T1w.nii.gz
+-rw-r--r-- 1 donbibi donbibi 10802621 Oct 30  2017 sub-OAS30001_ses-d0757_run-01_T1w.nii.gz
+-rw-r--r-- 1 donbibi donbibi 10678450 Oct 27  2017 sub-OAS30001_ses-d0129_run-02_T1w.nii.gz
+-rw-r--r-- 1 donbibi donbibi 10669011 Oct 27  2017 sub-OAS30001_ses-d0129_run-01_T1w.nii.gz
+
+The images follow the same pattern on 'dxxxx' representing days since first entry, so 'sub-OAS30001_ses-d0129_run-01_T1w.nii.gz' is an image that was taken 129 days into the study
+since first entry.
+And here is the first hurdle, the image dates and clinical ID dates don't align up, so I'd have to come up with a suitable criteria to correlate the images to the given diagnosis
+for each clinical ID.
+
+Coming up with a criteria is essential for two reasons:
+1. For allocating images to a suitable clinical ID in the database.
+2. For associating an image's clincal diagnosis.
+
+But when taking a closer look at the images for a subject, we see that sometimes there more than one image runs in a single session:
+-rw-r--r-- 1 donbibi donbibi 11052259 Oct 30  2017 sub-OAS30001_ses-d0757_run-02_T1w.nii.gz
+-rw-r--r-- 1 donbibi donbibi 10802621 Oct 30  2017 sub-OAS30001_ses-d0757_run-01_T1w.nii.gz
+-rw-r--r-- 1 donbibi donbibi 10678450 Oct 27  2017 sub-OAS30001_ses-d0129_run-02_T1w.nii.gz
+-rw-r--r-- 1 donbibi donbibi 10669011 Oct 27  2017 sub-OAS30001_ses-d0129_run-01_T1w.nii.gz
+
+And this was just for subject 30001, if we were to check for how many of these images contain multiple runs:
+
+donbibi@ghost:~/Documents/FYP/t1w$ ls -lt | grep run | wc -l
+2205
+
+We can see that there are 2205 images with runs out of the 3393 images in total; around 65%.
+
+When looking into "runs", we see that the max number of runs is 6, so an easy solution is to create more columns in the database for each run, i.e. run1 - run6,
+where run1 will be an image from a session without multiple runs or the first run's image from a single session with multiple runs:
+
+sqlite> ALTER TABLE subjects ADD COLUMN {run1 - run6} blob;
+
+To import the nifti files into the DB depending on a criteria deciding which clinical ID diagnosis should pair with which image, a PERL script will be needed.
+
+<- insert perl script importImages.pl ->
+
