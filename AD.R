@@ -9,6 +9,8 @@ library(oro.dicom)
 library(oro.nifti)
 library(neurobase)
 
+setwd("AD")
+
 # Read OASIS3 clinical data of subjects to a data frame.
 clinical_data <- read.csv("csv/clinical_data.csv", header = TRUE)
 
@@ -52,17 +54,17 @@ later_ad_diagnosis_unclean <- c()
 
 for (id in cn_unique_ids)
 {
- dx1_rows <- clinical_data %>%
-   filter(str_detect(Subject, id)) %>%
-   select(dx1)
- dx1_rows <- dx1_rows[, 'dx1']
- 
- if (any(str_detect(str_to_lower(dx1_rows), "cognitively normal", negate = TRUE)))
- {
-   cn_subjects <- cn_subjects %>%
-     filter(Subject != id)
-   later_ad_diagnosis_unclean <- c(later_ad_diagnosis_unclean, id)
- }
+  dx1_rows <- clinical_data %>%
+    filter(str_detect(Subject, id)) %>%
+    select(dx1)
+  dx1_rows <- dx1_rows[, 'dx1']
+  
+  if (any(str_detect(str_to_lower(dx1_rows), "cognitively normal", negate = TRUE)))
+  {
+    cn_subjects <- cn_subjects %>%
+      filter(Subject != id)
+    later_ad_diagnosis_unclean <- c(later_ad_diagnosis_unclean, id)
+  }
 }
 
 # Lets track all AD Demntia subject's subject IDs where their last entry in clinical diagnosis is Cognitively Normal.
@@ -83,7 +85,7 @@ for ( id in possible_misdiagnosis_subj_id)
   diagnosis <- clinical_data %>%
     filter(Subject == id) %>%
     select(dx1)
-   diagnosis <- diagnosis[,1] 
+  diagnosis <- diagnosis[,1] 
   last <- str_to_lower(diagnosis[length(diagnosis)])
   if(str_detect(last, 'AD Dementia', negate = TRUE) &
      str_detect(str_to_lower(last), 'cognitively normal'))
@@ -91,7 +93,7 @@ for ( id in possible_misdiagnosis_subj_id)
     certain_misdiagnosis <- c(certain_misdiagnosis, id)
   }
   if(str_detect(last, 'AD Dementia', negate = TRUE &
-                     str_detect(str_to_lower(last), 'cognitively normal', negate = TRUE)))
+                str_detect(str_to_lower(last), 'cognitively normal', negate = TRUE)))
   {
     related_misdiagnosis <- c(related_misdiagnosis, id)
   }
@@ -117,7 +119,7 @@ t1w_files <-list.files('t1w/')
 
 # Since all our Cognitively Normal subjects show enough brain atrophy to be diagnosed as otherwise,
 # We can just copy all the files for each subject into one directory.
-cn_folder <- "/home/donbibi/Documents/FYP/cn"
+cn_folder <- "/home/dthomas/AD/cn"
 setwd("./t1w/")
 for (cn_id in cn_subjects$Subject)
 {
@@ -139,7 +141,7 @@ for (ad_id in unique(ad_subjects$Subject))
   
   clin_data <- clin_data[, 1]
   clin_data <- str_match(clin_data, 'OAS\\d*_ClinicalData_d(\\d*)')
- 
+  
   clin_date <- as.numeric(clin_data[,2]) 
   for(img in images)
   {
@@ -155,6 +157,12 @@ for (ad_id in unique(ad_subjects$Subject))
 # Let's confirm the images in the directory 'cn' and 'ad' don't overlap.
 Reduce(intersect, list(ad_images_to_copy, list.files("./cn")))
 
+# Copy AD images.
+setwd("./t1w")
+ad_dir <- "/home/dthomas/AD/ad"
+file.copy(ad_images_to_copy, ad_dir)
+setwd("../")
+
 # Looks like there's no overlap, so we can no safely proceed to the next step, but before that
 # lets calculate the image yield and copy the images to the 'ad' directory.
 cn_num <- length(list.files("./cn"))
@@ -163,13 +171,60 @@ total_num <- length(list.files("./t1w/"))
 (cn_num + ad_num) / total_num * 100
 # Around 69% of the total T1-weighted images are being used.
 
-# Copy images.
-setwd("./t1w")
-ad_dir <- "/home/donbibi/Documents/FYP/ad"
-file.copy(ad_images_to_copy, ad_dir)
-setwd("../")
-
-
 #########################################################################################
 
+# Now that we have two folders with AD images and CN images,
+# We can proceed towards pre-processing the image,
+# In this step, we'll perform Inhomogeneity correction.
+
+# N4 inhomogeneity correction.
+# v(x) = u(x)f(x) + n(x)
+# v is the given image
+# u is the uncorrupted image
+# f is the bias field
+# n is the noise (assumed to be independent and Gaussian)
+# x is a location in the image
+# The data is log-transformed and assuming a noise-free scenario, we have:
+# log(v(x)) = log(u(x)) + log(f(x))
+library(foreach)
+library(doParallel)
+library(extrantsr)
+registerDoParallel(8)
+
+setwd("/home/dthomas/AD/")
+
+cn <- list.files("cn/")
+ad <- list.files("ad/")
+
+cn_b <- list.files("cn_bias_corrected/")
+ad_b <- list.files("ad_bias_corrected/")
+
+cn_remaining <- cn[!cn %in% cn_b]
+ad_remaining <- ad[!ad %in% ad_b]
+
+start_time1 <- Sys.time()
+foreach(file = cn_remaining) %dopar%
+{
+  setwd("cn/")
+  img <- readnii(file)
+  bc_img = bias_correct(file = img, correction = "N4")
+  setwd("../cn_bias_corrected/")
+  writenii(bc_img, file)
+  setwd("../")
+  gc()
+}
+end_time1 <- Sys.time()
+
+start_time2 <- Sys.time()
+foreach(file = ad_remaining) %dopar%
+{
+  setwd("ad/")
+  img <- readnii(file)
+  bc_img = bias_correct(file = img, correction = "N4")
+  setwd("../ad_bias_corrected/")
+  writenii(bc_img, file)
+  setwd("../")
+  gc()
+}
+end_time2 <- Sys.time()
 
