@@ -1,4 +1,4 @@
-# Exploring OASIS3 Alzheimer's Data.
+# Exploring and extracting data from OASIS3 Alzheimer's Data.
 # @author dthomas
 
 # Load libraries.
@@ -49,7 +49,7 @@ length(unique(cn_subjects$Subject))
 cn_unique_ids <- unique(cn_subjects$Subject)
 
 # But let's also track subject ids of patients that went from being cognitively normal to
-# being diagnosed with AD and patients who went from AD to non AD, possible misdiagnosis.
+# being diagnosed with AD and patients who went from AD to non AD; possible misdiagnosis.
 later_ad_diagnosis_unclean <- c()
 
 for (id in cn_unique_ids)
@@ -118,9 +118,12 @@ test_subjects <- rbind(ad_subjects, cn_subjects)
 t1w_files <-list.files('t1w/')
 
 # Since all our Cognitively Normal subjects show enough brain atrophy to be diagnosed as otherwise,
-# We can just copy all the files for each subject into one directory.
+# we can just copy all the files for each subject into one directory.
+# i.e. the subjects were always cognitively normal.
 cn_folder <- "/home/dthomas/AD/cn"
+
 setwd("./t1w/")
+
 for (cn_id in cn_subjects$Subject)
 {
   images <- t1w_files[str_detect(t1w_files, cn_id)]
@@ -163,68 +166,10 @@ ad_dir <- "/home/dthomas/AD/ad"
 file.copy(ad_images_to_copy, ad_dir)
 setwd("../")
 
-# Looks like there's no overlap, so we can no safely proceed to the next step, but before that
+# Looks like there's no overlap, so we can now safely proceed to the next step, but before that
 # lets calculate the image yield and copy the images to the 'ad' directory.
 cn_num <- length(list.files("./cn"))
 ad_num <- length(list.files("./ad"))
 total_num <- length(list.files("./t1w/"))
-(cn_num + ad_num) / total_num * 100
+(cn_num + ad_num) / total_num * 10
 # Around 69% of the total T1-weighted images are being used.
-
-#########################################################################################
-
-# Now that we have two folders with AD images and CN images,
-# We can proceed towards pre-processing the image,
-# In this step, we'll perform Inhomogeneity correction.
-
-# N4 inhomogeneity correction.
-# v(x) = u(x)f(x) + n(x)
-# v is the given image
-# u is the uncorrupted image
-# f is the bias field
-# n is the noise (assumed to be independent and Gaussian)
-# x is a location in the image
-# The data is log-transformed and assuming a noise-free scenario, we have:
-# log(v(x)) = log(u(x)) + log(f(x))
-library(foreach)
-library(doParallel)
-library(extrantsr)
-registerDoParallel(8)
-
-setwd("/home/dthomas/AD/")
-
-cn <- list.files("cn/")
-ad <- list.files("ad/")
-
-cn_b <- list.files("cn_bias_corrected/")
-ad_b <- list.files("ad_bias_corrected/")
-
-cn_remaining <- cn[!cn %in% cn_b]
-ad_remaining <- ad[!ad %in% ad_b]
-
-start_time1 <- Sys.time()
-foreach(file = cn_remaining) %dopar%
-{
-  setwd("cn/")
-  img <- readnii(file)
-  bc_img = bias_correct(file = img, correction = "N4")
-  setwd("../cn_bias_corrected/")
-  writenii(bc_img, file)
-  setwd("../")
-  gc()
-}
-end_time1 <- Sys.time()
-
-start_time2 <- Sys.time()
-foreach(file = ad_remaining) %dopar%
-{
-  setwd("ad/")
-  img <- readnii(file)
-  bc_img = bias_correct(file = img, correction = "N4")
-  setwd("../ad_bias_corrected/")
-  writenii(bc_img, file)
-  setwd("../")
-  gc()
-}
-end_time2 <- Sys.time()
-
