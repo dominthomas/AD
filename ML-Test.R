@@ -1,5 +1,5 @@
 library(neurobase)
-library(ggplot2)
+#library(ggplot2)
 library(tensorflow)
 library(keras)
 library(abind)
@@ -63,7 +63,7 @@ train_data <- list()
 for(file in cn_all)
 {
   # Initially, read in 50 CN images.
-  if(length(train_data) == 50)
+  if(length(train_data) == 25)
   {
     break
   }
@@ -84,7 +84,7 @@ setwd("../extracted_ad/")
 for(file in ad_all)
 {
   # Read in 50 more AD images.
-  if(length(train_data) == 100)
+  if(length(train_data) == 50)
   {
     break
   }
@@ -100,23 +100,23 @@ for(file in ad_all)
 }
 setwd("../")
 
-test_data <- train_data[1:15]
-test_data <- append(test_data, train_data[51: 65])
+test_data <- train_data[1:5]
+test_data <- append(test_data, train_data[26: 30])
 
-training <- train_data[16:50]
-training <- append(training, train_data[66:100])
+training <- train_data[6:25]
+training <- append(training, train_data[31:50])
 remove(train_data)
 train_data <- training
 remove(training)
 
 # Create labels for test data.
-x <- rep('0', 15) # CN
-y <- rep('1', 15) # AD
+x <- rep('0', 5) # CN
+y <- rep('1', 5) # AD
 test_labels <- c(x,y)
 
 # Create labels for train data.
-x <- rep('0', 35) # CN
-y <- rep('1', 35) # AD
+x <- rep('0', 20) # CN
+y <- rep('1', 20) # AD
 train_labels <- c(x,y)
 
 # Turn train_data & test_data into a 5D array from a list of 4D arrays.
@@ -136,7 +136,7 @@ remove(cn_all, ad_all, nifti_file, bob, bsum, d, array_4d, x, y)
 # Create sequential model
 model <- keras_model_sequential()
 
-model %>% layer_conv_3d(filters = 70, 
+model %>% layer_conv_3d(filters = 16, 
                         kernel_size = c(7,7,7),
                         input_shape=c(176, 256, 256, 1),
                         data_format = 'channels_last') %>%
