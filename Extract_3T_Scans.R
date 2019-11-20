@@ -67,3 +67,4 @@ for (file in cn)
 }
 
 # Only 278 AD 3 Tesla MRIs :(
+# and 1641 CN 3 Tesla MRIs :/
