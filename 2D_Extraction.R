@@ -83,7 +83,8 @@ print(end_time_cn - start_time_cn)
 
 
 
-# An oddity, there are only 1640 directories, ther should be 1641.
+# An oddity, there are only 1640 directories, there should be 1641.
+# setdiff shows 0.
 
 cn_2D <- list.files("/home/dthomas/AD/2D/CN/")
 nifti_names <- c()
@@ -96,7 +97,10 @@ for(nifti_file_name in cn)
     folder_name <- paste(sub, "_", ses, run, sep="")
     nifti_names <- c(nifti_names, folder_name)
 }
-setdiff(nifti_names, cn_2D)
+
+duplicates <- nifti_names[duplicated(nifti_names)]
+# Found the culprit, sub-OAS30253_ses-d3948_T2starBrainExtractionBrain.nii,
+# there was a T2 star image in the data set.
 ###########################################TEST################################################
 
 nifti_file <- readnii("3T_extracted_ad/sub-OAS30024_ses-d0084_T1wBrainExtractionBrain.nii.gz")

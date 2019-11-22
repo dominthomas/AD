@@ -89,10 +89,10 @@ server <- function(input, output, session) {
   })
  
   # End the shiny session when the app closes. 
-  session$onSessionEnded(function() { 
-    stopApp()
-    q("no") 
-  })
+#  session$onSessionEnded(function() { 
+#    stopApp()
+#    q("no") 
+#  })
   
   # TODO remove - for debugging.
   observe({
