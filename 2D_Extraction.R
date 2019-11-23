@@ -78,10 +78,7 @@ foreach(nifti_file_name = cn) %dopar%
     }
   }
 end_time_cn <- Sys.time()
-
 print(end_time_cn - start_time_cn)
-
-
 
 # An oddity, there are only 1640 directories, there should be 1641.
 # setdiff shows 0.
@@ -101,13 +98,98 @@ for(nifti_file_name in cn)
 duplicates <- nifti_names[duplicated(nifti_names)]
 # Found the culprit, sub-OAS30253_ses-d3948_T2starBrainExtractionBrain.nii,
 # there was a T2 star image in the data set.
+################################################################################################
+
+
+# Find hippocampal ratio.
+setwd("/home/dthomas/AD/2D/AD")
+ad_hippocampal1 <- list.files("OAS30024_d0084NA/")
+ad_hippocampal1_num <- c()
+
+for(png in ad_hippocampal1)
+{
+  ad_hippocampal1_num <- c(ad_hippocampal1_num, str_extract(png, '(\\d*)'))
+}
+ad_hippocampal1_num <- sort(as.numeric(ad_hippocampal1_num))
+
+setwd("OAS30024_d0084NA/")
+img <- load.image(paste
+                  (ad_hippocampal1_num
+                    [86], ".png", sep="")) ; plot(img)
+
+
+setwd("/home/dthomas/AD/2D/AD")
+ad_hippocampal1 <- list.files("OAS30031_d0427run-01/")
+ad_hippocampal1_num <- c()
+
+for(png in ad_hippocampal1)
+{
+  ad_hippocampal1_num <- c(ad_hippocampal1_num, str_extract(png, '(\\d*)'))
+}
+ad_hippocampal1_num <- sort(as.numeric(ad_hippocampal1_num))
+
+setwd("OAS30031_d0427run-01/")
+img <- load.image(paste
+                  (ad_hippocampal1_num
+                    [86], ".png", sep="")) ; plot(img)
+
+png <- readPNG(paste(ad_hippocampal1_num[86], ".png", sep=""))
+ad_hippocampal <- append(ad_hippocampal, list(png))
+ad_hippocampal <- append(ad_hippocampal, list(png))
+
+setwd("/home/dthomas/AD/2D/AD/")
+folders <- list.files(".")
+ad_hippocampal <- list()
+
+for(folder in folders)
+{
+  setwd(folder)
+  files <- list.files(".")
+  file_num_only <- c()
+  
+  for(file in files)
+  {
+    file_num_only <- c(file_num_only, str_extract(file, '(\\d*)'))
+  }
+  
+  file_num_only <- sort(as.numeric(file_num_only))
+  png <- readPNG(paste(file_num_only[86], ".png", sep=""))
+  ad_hippocampal <- append(ad_hippocampal, list(png))
+  setwd("../")
+}
+
+setwd("/home/dthomas/AD/2D/CN/")
+folders <- list.files(".")
+cn_hippocampal <- list()
+
+for(folder in folders)
+{
+  if(length(cn_hippocampal) == 278)
+  {
+    break
+  }
+  setwd(folder)
+  files <- list.files(".")
+  file_num_only <- c()
+  
+  for(file in files)
+  {
+    file_num_only <- c(file_num_only, str_extract(file, '(\\d*)'))
+  }
+  
+  file_num_only <- sort(as.numeric(file_num_only))
+  png <- readPNG(paste(file_num_only[86], ".png", sep=""))
+  cn_hippocampal <- append(cn_hippocampal, list(png))
+  setwd("../")
+}
 ###########################################TEST################################################
 
+setwd("/home/dthomas/AD/")
 nifti_file <- readnii("3T_extracted_ad/sub-OAS30024_ses-d0084_T1wBrainExtractionBrain.nii.gz")
 nifti_file_name <- "sub-OAS30024_ses-d0084_T1wBrainExtractionBrain.nii.gz"
 
 png(filename = "/home/dthomas/AD/teset.png")
-image(nifti_file, z = 240, plot.type="single", plane="coronal")
+image(nifti_file, z = 120, plot.type="single", plane="coronal", )
 dev.off()
 
 t1 <- readPNG("/home/dthomas/AD/teset.png")
