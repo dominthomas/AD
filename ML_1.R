@@ -20,7 +20,7 @@ for(folder in folders)
   }
   
   file_num_only <- sort(as.numeric(file_num_only))
-  png <- readPNG(paste(file_num_only[86], ".png", sep=""))
+  png <- readPNG(paste(file_num_only[88], ".png", sep=""))
   gray <- png[,,1]
   dim(gray) <- c(480, 480, 1)
   ad_hippocampal <- append(ad_hippocampal, list(gray))
@@ -50,7 +50,7 @@ for(folder in folders)
     }
     
     file_num_only <- sort(as.numeric(file_num_only))
-    png <- readPNG(paste(file_num_only[86], ".png", sep=""))
+    png <- readPNG(paste(file_num_only[88], ".png", sep=""))
     gray <- png[,,1]
     dim(gray) <- c(480, 480, 1)
     cn_hippocampal <- append(cn_hippocampal, list(gray))
@@ -58,9 +58,9 @@ for(folder in folders)
   }
 }
 
-set.seed(19382)
+set.seed(1382)
 cn_hippocampal <- sample(cn_hippocampal)
-set.seed(19382)
+set.seed(1382)
 ad_hippocampal <- sample(ad_hippocampal)
 
 train_data <- cn_hippocampal[1:150]
@@ -68,7 +68,7 @@ train_data <- append(train_data, ad_hippocampal[1:150])
 
 validation_data <- cn_hippocampal[151:200]
 validation_data <- append(validation_data, ad_hippocampal[151:200])
-set.seed(982)
+set.seed(182)
 validation_data <- sample(validation_data)
 
 test_data <- cn_hippocampal[201:278]
@@ -83,7 +83,7 @@ train_labels <- c(x,y)
 x <- rep('0', 50) # CN
 y <- rep('1', 50) # AD
 validation_labels <- c(x,y)
-set.seed(982)
+set.seed(182)
 validation_labels <- sample(validation_labels)
 
 
@@ -114,10 +114,10 @@ model %>% layer_conv_2d(filters = 32,
                         input_shape=c(480, 480, 1),
                         data_format = 'channels_last',
                         activation = 'relu') %>%
-  layer_conv_2d(filters = 32,
+  layer_conv_2d(filters = 64,
                 kernel_size = c(6,6),
                 activation = 'relu') %>%
-  layer_max_pooling_2d(pool_size = c(2,2)) %>%
+  layer_max_pooling_2d(pool_size = c(5,5)) %>%
   layer_dropout(rate = 0.25) %>%
   layer_conv_2d(filters = 64,
                 kernel_size = c(6,6),
@@ -125,11 +125,11 @@ model %>% layer_conv_2d(filters = 32,
    layer_conv_2d(filters = 64,
                 kernel_size = c(6,6),
                 activation = 'relu') %>%
-  layer_max_pooling_2d(pool_size = c(2,2)) %>%
-  layer_dropout(rate = 0.25) %>%
+  layer_max_pooling_2d(pool_size = c(4,4)) %>%
+  layer_dropout(rate = 0.20) %>%
   layer_flatten() %>% 
-  layer_dense(units = 256, activation = 'relu') %>%
-  layer_dropout(rate = 0.25) %>%
+  layer_dense(units = 32, activation = 'relu') %>%
+  layer_dropout(rate = 0.40) %>%
   layer_dense(units = 2, activation = 'softmax')
 
 # Compile
@@ -137,12 +137,13 @@ model %>%
   compile(loss = 'binary_crossentropy',
           optimizer = 'adam',
           metrics = 'accuracy')
+
 # Fit model
 history <- model %>%
   fit(train_data,
       train_labels,
       epoch = 50,
-      batch_size = 60,
+      batch_size = 30,
       validation_data=list(validation_data, validation_labels),
       shuffle = TRUE) 
 
