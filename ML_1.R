@@ -3,6 +3,7 @@ library(stringr)
 library(tensorflow)
 library(keras)
 library(abind)
+library(EBImage)
 
 setwd("/home/dthomas/AD/2D/AD/")
 folders <- list.files(".")
@@ -20,10 +21,11 @@ for(folder in folders)
   }
   
   file_num_only <- sort(as.numeric(file_num_only))
-  png <- readPNG(paste(file_num_only[88], ".png", sep=""))
-  gray <- png[,,1]
-  dim(gray) <- c(480, 480, 1)
-  ad_hippocampal <- append(ad_hippocampal, list(gray))
+  png <- readImage(paste(file_num_only[88], ".png", sep=""))
+  plot(png)
+  Sys.sleep(1)
+  #dim(gray) <- c(480, 480, 1)
+  #ad_hippocampal <- append(ad_hippocampal, list(gray))
   setwd("../")
 }
 

@@ -231,6 +231,9 @@ remove(folder_sub_id,
        sub_id_cn)
 gc()
 
+tb_log <- "tb_log"
+tensorboard(tb_log)
+
 # Create sequential model
 model <- keras_model_sequential()
 
@@ -267,6 +270,14 @@ model %>% layer_conv_2d(
   
   layer_conv_2d(
     filters = 384,
+    kernel_size = c(3, 3),
+    strides = c(1, 1),
+    padding = "valid",
+    activation = "relu"
+  ) %>%
+  
+  layer_conv_2d(
+    filters = 512,
     kernel_size = c(3, 3),
     strides = c(1, 1),
     padding = "valid",
@@ -315,9 +326,13 @@ history <- model %>%
     epoch = 50,
     batch_size = 100,
     validation_data = list(validation_data, validation_labels),
-    shuffle = TRUE
+    shuffle = TRUE,
+    callbacks = c(callback_tensorboard(
+      log_dir = tb_log,
+      embeddings_freq = 1,
+      histogram_freq = 1
+    ))
   )
 
 # Test model
 model %>% evaluate(test_data, test_labels, verbose = 0)
-
