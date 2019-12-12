@@ -4,6 +4,8 @@ library(png)
 library(parallel)
 library(doParallel)
 library(stringr)
+library(EBImage)
+library(SpatialPack)
 
 setwd("/home/dthomas/AD/")
 registerDoParallel(16)
@@ -113,10 +115,51 @@ for(png in ad_hippocampal1)
 ad_hippocampal1_num <- sort(as.numeric(ad_hippocampal1_num))
 
 setwd("OAS30024_d0084NA/")
-img <- load.image(paste
+I <- load.image(paste
                   (ad_hippocampal1_num
-                    [86], ".png", sep="")) ; plot(img)
+                    [86], ".png", sep=""))
 
+I_edges <- deriche(I, 2, order = 2, axis = "y", neumann = FALSE)
+plot(I)
+I_crop <- I %>% autocrop(c(0,0,0))
+plot(I_crop)
+I_rotate <- imrotate(I, angle = 1.5) %>% resize(227,227) %>% autocrop(c(0,0,0))
+plot(I_rotate)
+
+I_rotate <- resize(I_crop, w = 227, h = 227)
+plot(I_rotate)
+I_gray <- grayscale(I)
+grayscale(I) %>% imgradient("xy") %>% plot(layout = "row")
+
+
+
+
+
+
+
+# Noise and Rotation
+I <- imrotate(I, angle = 180)
+
+I=RGB2gray(I)
+
+v = (0.05*sd(I[,,,1]))^2
+noise = imnoise(I[,,,1], 'gaussian', 0, v);
+noise = max(I)*noise
+#subplot(121);imshow(I,[]);subplot(122);imshow(I_noisy,[])
+
+plot(I[,,,1])
+plot(noise)
+image(noise)
+
+noise <- imnoise(img, type = "gaussian", 1, 0.00000000000001)
+image(I)
+#img <- resize(img, w = 227, h = 227)
+img_rotate <- imrotate(img, angle = -3)
+img_rotate <- resize(img_rotate, w = 480, h =480)
+plot(img_rotate)
+d1 <- resize(img_rotate, w = 480, h =480)
+d2 <- d1[,,,3]
+image(img_rotate[,,,3])
 
 setwd("/home/dthomas/AD/2D/AD")
 ad_hippocampal1 <- list.files("OAS30031_d0427run-01/")
