@@ -9,6 +9,11 @@ library(EBImage)
 
 
 ########################################################
+loss <- c()
+accuracy <- c()
+seeds <- 1:500
+for(seed in seeds)
+{
 folders_ad <- list.files("/home/dthomas/AD/2D/AD/")
 folders_cn <- list.files("/home/dthomas/AD/2D/CN/")
 
@@ -61,6 +66,10 @@ get_images <- function(folders, train = FALSE, cn = FALSE, ad_data_length = 0)
     file_num_only <- sort(as.numeric(file_num_only))
     png <- paste(file_num_only[88], ".png", sep = "") %>%
       load.image()
+    png2 <- paste(file_num_only[87], ".png", sep = "") %>%
+      load.image()
+    png3 <- paste(file_num_only[89], ".png", sep = "") %>%
+      load.image()
     
     if (train)
     {
@@ -77,6 +86,35 @@ get_images <- function(folders, train = FALSE, cn = FALSE, ad_data_length = 0)
       gray2 <- png_rotate[, , , 1]
       dim(gray2) <- c(227, 227, 1)
       return_list <- append(return_list, list(gray2))
+      
+      png_rotate <- imrotate(png2, angle = 3) %>%
+        autocrop(c(0, 0, 0)) %>%
+        resize(w = 227, h = 227)
+      gray2 <- png_rotate[, , , 1]
+      dim(gray2) <- c(227, 227, 1)
+      return_list <- append(return_list, list(gray2))
+      
+      png_rotate <- imrotate(png2, angle = -4) %>%
+        autocrop(c(0, 0, 0)) %>%
+        resize(w = 227, h = 227)
+      gray2 <- png_rotate[, , , 1]
+      dim(gray2) <- c(227, 227, 1)
+      return_list <- append(return_list, list(gray2))
+      
+      png_rotate <- imrotate(png3, angle = 3) %>%
+        autocrop(c(0, 0, 0)) %>%
+        resize(w = 227, h = 227)
+      gray2 <- png_rotate[, , , 1]
+      dim(gray2) <- c(227, 227, 1)
+      return_list <- append(return_list, list(gray2))
+      
+      png_rotate <- imrotate(png3, angle = -4) %>%
+        autocrop(c(0, 0, 0)) %>%
+        resize(w = 227, h = 227)
+      gray2 <- png_rotate[, , , 1]
+      dim(gray2) <- c(227, 227, 1)
+      return_list <- append(return_list, list(gray2))
+      
     }
     png <- png %>%
       autocrop(c(0, 0, 0)) %>%
@@ -85,6 +123,23 @@ get_images <- function(folders, train = FALSE, cn = FALSE, ad_data_length = 0)
     gray <- png[, , , 1]
     dim(gray) <- c(227, 227, 1)
     return_list <- append(return_list, list(gray))
+    
+    png <- png2 %>%
+      autocrop(c(0, 0, 0)) %>%
+      resize(w = 227, h = 227)
+    
+    gray <- png[, , , 1]
+    dim(gray) <- c(227, 227, 1)
+    return_list <- append(return_list, list(gray))
+    
+    png <- png3 %>%
+      autocrop(c(0, 0, 0)) %>%
+      resize(w = 227, h = 227)
+    
+    gray <- png[, , , 1]
+    dim(gray) <- c(227, 227, 1)
+    return_list <- append(return_list, list(gray))
+    
     setwd("../")
   }
   return(return_list)
@@ -94,7 +149,7 @@ setwd("/home/dthomas/AD/2D/AD/")
 folders <- list.files(".")
 
 # Shuffle
-set.seed(10945)
+set.seed(seed)
 sub_id_ad <- sample(sub_id_ad)
 ad_sub_train <- sub_id_ad[1:112]
 ad_sub_validate <- sub_id_ad[113:124]
@@ -128,7 +183,7 @@ ad_test <- get_images(ad_sub_test_folders)
 setwd("/home/dthomas/AD/2D/CN/")
 folders <- list.files(".")
 # Shuffle
-set.seed(10679)
+set.seed(seed)
 sub_id_cn <- sample(sub_id_cn)
 cn_sub_train <- sub_id_cn[1:112]
 cn_sub_validate <- sub_id_cn[113:124]
@@ -231,8 +286,8 @@ remove(folder_sub_id,
        sub_id_cn)
 gc()
 
-tb_log <- "tb_log"
-tensorboard(tb_log)
+#tb_log <- "tb_log"
+#tensorboard(tb_log)
 
 # Create sequential model
 model <- keras_model_sequential()
@@ -324,15 +379,23 @@ history <- model %>%
     train_data,
     train_labels,
     epoch = 50,
-    batch_size = 100,
+    batch_size = 400,
     validation_data = list(validation_data, validation_labels),
-    shuffle = TRUE,
-    callbacks = c(callback_tensorboard(
-      log_dir = tb_log,
-      embeddings_freq = 1,
-      histogram_freq = 1
-    ))
+    shuffle = TRUE
+    #callbacks = c(callback_tensorboard(
+    #  log_dir = tb_log,
+    #  embeddings_freq = 1,
+    #  histogram_freq = 1
+    #))
   )
 
 # Test model
-model %>% evaluate(test_data, test_labels, verbose = 0)
+evaluation <- model %>% evaluate(test_data, test_labels, verbose = 0)
+print(evaluation)
+# Hehehehehehehehehe
+
+
+loss <- c(loss, evaluation[[1]])
+accuracy <- c(accuracy, evaluation[[2]])
+}
+
