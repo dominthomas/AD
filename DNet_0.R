@@ -44,13 +44,16 @@ any(duplicated(sub_id_cn, sub_id_ad))
 # 588 CN subjects.
 ########################################################
 
-get_images <- function(folders, train = FALSE, cn = FALSE, ad_data_length = 0)
+get_images <- function(folders, train = FALSE, same_length = FALSE, data_length = 0, adni = FALSE)
 {
+  # Since three slices are used as default, without image augmentation.
+  data_length <- data_length*3
+  
   return_list <- list()
   
   for (folder in folders)
   {
-    if(cn && abs(length(return_list) - ad_data_length) <= 3)
+    if(same_length && length(return_list) == data_length)
     {
       break
     }
@@ -70,6 +73,14 @@ get_images <- function(folders, train = FALSE, cn = FALSE, ad_data_length = 0)
       load.image()
     png3 <- paste(file_num_only[89], ".png", sep = "") %>%
       load.image()
+    
+    if(adni){
+      
+      png <- imrotate(png, angle = 90)
+      png2 <- imrotate(png2, angle = 90)
+      png3 <- imrotate(png3, angle = 90)
+      
+    }
     
     if (train)
     {
@@ -151,9 +162,9 @@ folders <- list.files(".")
 # Shuffle
 set.seed(seed)
 sub_id_ad <- sample(sub_id_ad)
-ad_sub_train <- sub_id_ad[1:112]
-ad_sub_validate <- sub_id_ad[113:124]
-ad_sub_test <- sub_id_ad[125:178]
+ad_sub_train <- sub_id_ad[1:165]
+ad_sub_validate <- sub_id_ad[166:170]
+ad_sub_test <- sub_id_ad[171:178]
 
 ad_sub_train_folders <- c()
 ad_sub_validate_folders <- c()
@@ -177,17 +188,17 @@ for (folder in folders)
 }
 
 ad_train <- get_images(ad_sub_train_folders, TRUE)
-ad_validate <- get_images(ad_sub_validate_folders)
-ad_test <- get_images(ad_sub_test_folders)
+ad_validate <- get_images(ad_sub_validate_folders, same_length = TRUE, data_length = 5)
+ad_test <- get_images(ad_sub_test_folders, same_length = TRUE, data_length = 8)
 
 setwd("/home/dthomas/AD/2D/CN/")
 folders <- list.files(".")
 # Shuffle
 set.seed(seed)
 sub_id_cn <- sample(sub_id_cn)
-cn_sub_train <- sub_id_cn[1:112]
-cn_sub_validate <- sub_id_cn[113:124]
-cn_sub_test <- sub_id_cn[125:178]
+cn_sub_train <- sub_id_cn[1:300]
+cn_sub_validate <- sub_id_cn[301:305]
+cn_sub_test <- sub_id_cn[306:313]
 
 cn_sub_train_folders <- c()
 cn_sub_validate_folders <- c()
@@ -210,12 +221,23 @@ for (folder in folders)
   }
 }
 
-cn_train <- get_images(cn_sub_train_folders, TRUE, TRUE, length(ad_train))
-cn_validate <- get_images(cn_sub_validate_folders, cn = TRUE, ad_data_length = length(ad_validate))
-cn_test <- get_images(cn_sub_test_folders, cn = TRUE, ad_data_length = length(ad_test))
+cn_train <- get_images(cn_sub_train_folders, TRUE)
+cn_validate <- get_images(cn_sub_validate_folders, same_length = TRUE, data_length = 5)
+cn_test <- get_images(cn_sub_test_folders, same_length = TRUE, data_length = 8)
+
+############ADNI Data Set, all data will be used for training############
+adni_folders_ad <- list.files("/home/dthomas/AD/ADNI/2D/AD/")
+adni_folders_cn <- list.files("/home/dthomas/AD/ADNI/2D/CN/")
+
+setwd("/home/dthomas/AD/ADNI/2D/AD/")
+adni_ad_train <- get_images(adni_folders_ad, train = TRUE, adni = TRUE)
+setwd("/home/dthomas/AD/ADNI/2D/CN/")
+adni_cn_train <- get_images(adni_folders_cn, train = TRUE, adni = TRUE)
 
 train_data <- cn_train
 train_data <- append(train_data, ad_train)
+train_data <- append(train_data, adni_cn_train)
+train_data <- append(train_data, adni_ad_train)
 
 validation_data <- cn_validate
 validation_data <- append(validation_data, ad_validate)
@@ -228,7 +250,9 @@ test_data <- append(test_data, ad_test)
 # Create labels for train data.
 x <- rep('0', length(cn_train)) # CN
 y <- rep('1', length(ad_train)) # AD
-train_labels <- c(x, y)
+x2 <- rep('0', length(adni_cn_train)) # CN
+y2 <- rep('1', length(adni_ad_train)) # AD
+train_labels <- c(x, y, x2, y2)
 
 # Create labels for validation data.
 x <- rep('0', length(cn_validate)) # CN
@@ -258,7 +282,11 @@ remove(cn_train,
        folder,
        folders,
        x,
-       y)
+       y,
+       x2,
+       y2,
+       adni_cn_train,
+       adni_ad_train)
 
 remove(ad_test, ad_validate, cn_test, cn_validate)
 
@@ -323,13 +351,13 @@ model %>% layer_conv_2d(
     activation = "relu"
   ) %>%
   
-  layer_conv_2d(
+   layer_conv_2d(
     filters = 384,
     kernel_size = c(3, 3),
     strides = c(1, 1),
     padding = "valid",
     activation = "relu"
-  ) %>%
+  ) %>% 
   
   layer_conv_2d(
     filters = 512,
@@ -397,5 +425,12 @@ print(evaluation)
 
 loss <- c(loss, evaluation[[1]])
 accuracy <- c(accuracy, evaluation[[2]])
+
+print(mean(accuracy))
+write(evaluation[[2]], file="/home/dthomas/accuracy.txt", append = TRUE)
+
+remove(train_data, validation_data, test_data, model)
+gc()
+
 }
 
