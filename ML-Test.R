@@ -3,9 +3,9 @@ library(neurobase)
 library(tensorflow)
 library(keras)
 library(abind)
-#library(foreach)
-#library(doParallel)
-#registerDoParallel(16)
+library(foreach)
+library(doParallel)
+registerDoParallel(16)
 
 # Learn Machine Learning
 
@@ -52,11 +52,35 @@ history <- model %>% fit(
 
 # Practice run on sample data.
 setwd("/home/dthomas/AD/")
-cn_all <- list.files("extracted_cn/")
-ad_all <- list.files("extracted_ad/")
+cn_all <- list.files("3T_extracted_cn/")
+ad_all <- list.files("3T_extracted_ad//")
 
-setwd("extracted_cn/")
+setwd("3T_extracted_cn//")
 
+
+train_data <- list()
+
+
+
+
+#####################################################TO DELETE##########################################################
+dimensions <- c()
+foreach(file = cn_all) %dopar%
+{
+  nifti_file <- readnii(file)
+  bob <- as.array(dim(nifti_file))
+  dimensions <- c(dimensions, c(bob))
+}
+setwd("../3T_extracted_ad/")
+
+for(file in ad_all)
+{
+  nifti_file <- readnii(file)
+  bob <- as.array(dim(nifti_file))
+  dimensions <- c(dimensions, bob)
+}
+setwd("../3T_extracted_cn/")
+####################################################TO DELETE##########################################################
 
 # Remove data that isn't 176 x 256 x 256
 train_data <- list()
@@ -77,6 +101,10 @@ for(file in cn_all)
     d <- slot(nifti_file, ".Data")
     array_4d <- array(c(d,1), dim=c(dim(d),1))
     train_data <- append(train_data, list(array_4d))
+  }
+  else {
+    print("Bad")
+    print(bob)
   }
 }
 
