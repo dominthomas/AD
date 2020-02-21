@@ -196,9 +196,9 @@ folders <- list.files(".")
 # Shuffle
 set.seed(seed)
 sub_id_cn <- sample(sub_id_cn)
-cn_sub_train <- sub_id_cn[1:300]
-cn_sub_validate <- sub_id_cn[301:305]
-cn_sub_test <- sub_id_cn[306:313]
+cn_sub_train <- sub_id_cn[1:574]
+cn_sub_validate <- sub_id_cn[575:580]
+cn_sub_test <- sub_id_cn[581:588]
 
 cn_sub_train_folders <- c()
 cn_sub_validate_folders <- c()
