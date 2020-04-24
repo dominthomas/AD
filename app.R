@@ -5,6 +5,11 @@ library(shinycssloaders)
 library(keras)
 library(imager)
 library(abind)
+library(parallel)
+library(doParallel)
+library(stringr)
+library(EBImage)
+registerDoParallel(16)
 
 # @author dthomas
 # @version 1.0
@@ -107,29 +112,25 @@ server <- function(input, output, session) {
         unlink("current_nifti", recursive = TRUE)
       }
       dir.create("current_nifti")
-      
-      for(slice_num in 1:dim(t1)[2])
+     
+      tryCatch( 
+      foreach(slice_num = 1:dim(t1)[2]) %dopar%
       {
         full_path <- paste("current_nifti", "/", slice_num, ".png", sep="")
         png(filename = full_path)
         image(t1, z = slice_num, plot.type="single", plane="coronal")
         dev.off()     
         
-        if(image_has_pixels_over_zero(full_path))
-        {
-          next
-        }
-        else
+        if(!image_has_pixels_over_zero(full_path))
         {
           file.remove(full_path)
         }
-      }
+      })
     }
   })
   
   prediction <- reactive({
     t1 <- niftiImage()
-    print("I'm here")
     if(dir.exists("current_nifti"))
     {
       setwd("current_nifti")
@@ -156,14 +157,6 @@ server <- function(input, output, session) {
       l <- list()
       l <- append(l, list(png))
       l <- abind(l, along = 0)
-      a <- predict(model, l)
-      print(a)
-      class(a)
-      print(a[1])
-      if(a == 0)
-      {
-        print("Hello")
-      }
       return(predict(model, l))
     }
   })
