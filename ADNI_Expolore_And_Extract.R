@@ -41,28 +41,134 @@ all_files <- list.files()
 
 ad <- as.character(unique(ad_images[,1]))
 cn <- as.character(unique(cn_images[,1]))
+mci <- as.character(unique(mci_images[,1]))
+
+ad_dir <- "/home/dthomas/AD/ADNI/ADNI_AD/"
+cn_dir <- "/home/dthomas/AD/ADNI/ADNI_CN/"
+
+ad_copy1 <- c()
+cn_copy1 <- c()
+mci_copy1 <- c()
+
+for(file in all_files)
+{
+  i <- str_match(file, "(_I\\d*)")
+  i <- i[2]
+  i <- substr(i, 3, nchar(i))
+  
+  if(i %in% ad)
+  {
+    ad_copy1 <- c(ad_copy1, file)
+  }
+  
+  else if(i %in% cn)
+  {
+    cn_copy1 <- c(cn_copy1, file)
+  }
+  
+  else if(i %in% mci)
+  {
+    mci_copy1 <- c(mci_copy1, file)
+  }
+}
+
+file.copy(ad_copy1, ad_dir)
+file.copy(cn_copy1, cn_dir)
+############################################# Finished ############################################################3
+
+data_1 <- read.csv("~/Downloads/ADNI_1.5T_MRI_Standardized_Lists/ADNI_Complete1YearVisitList_8_22_12.csv")
+data_2 <- read.csv("~/Downloads/ADNI_1.5T_MRI_Standardized_Lists/ADNI_Complete2YearVisitList_8_22_12.csv")
+data_ca2 <- read.csv("~/Downloads/ADNI_1.5T_MRI_Standardized_Lists/ADNI_CompleteAnnual2YearVisitList_8_22_12.csv")
+data_c <- read.csv("~/Downloads/ADNI_1.5T_MRI_Standardized_Lists/ADNI_CompleteVisitList_8_22_12.csv")
+data_s <- read.csv("~/Downloads/ADNI_1.5T_MRI_Standardized_Lists/ADNI_ScreeningList_8_22_12.csv")
+
+data_all <- rbind(data_1, data_2, data_ca2, data_c, data_s)
+length(unique(data_all$Image.ID))
+
+ad_images <- data_all %>% filter(str_detect(Screen.Diagnosis, "AD")) %>% select(Image.ID)
+length(unique(ad_images$Image.ID))
+
+cn_images <- data_all %>% filter(str_detect(Screen.Diagnosis, "NL")) %>% select(Image.ID)
+length(unique(cn_images$Image.ID))
+
+mci_images <- data_all %>% filter(str_detect(Screen.Diagnosis, "MCI")) %>% select(Image.ID)
+length(unique(mci_images$Image.ID))
+
+
+setwd("~/AD/ADNI/ADNI_1_5_T_ALL/")
+all_files <- list.files()
+
+ad <- as.character(unique(ad_images[,1]))
+cn <- as.character(unique(cn_images[,1]))
+mci <- as.character(unique(mci_images[,1]))
 
 ad_images_to_copy <- c()
-for (ad_id in ad)
+for(ad_id in ad)
 {
   image <- all_files[str_detect(all_files, ad_id)]
   ad_images_to_copy <- c(ad_images_to_copy, image)
 }
 
-# Copy AD images.
-ad_dir <- "/home/dthomas/AD/ADNI/ADNI_AD/"
+ad_dir <- "~/AD/ADNI/ADNI_1_5_T_AD/"
 file.copy(ad_images_to_copy, ad_dir)
-setwd("../")
 
-# Copy CN Images.
 cn_images_to_copy <- c()
-for (cn_id in cn)
+for(file in all_files)
 {
+  i <- str_match(file, "(I\\d*)")
   image <- all_files[str_detect(all_files, cn_id)]
   cn_images_to_copy <- c(cn_images_to_copy, image)
 }
 
-cn_dir <- "/home/dthomas/AD/ADNI/ADNI_CN/"
+cn_dir <- "~/AD/ADNI/ADNI_1_5_T_CN/"
 file.copy(cn_images_to_copy, cn_dir)
+
+ad_copy2 <- c()
+cn_copy2 <- c()
+mci_copy2 <- c()
+
+for(file in all_files)
+{
+  i <- str_match(file, "(_I\\d*)")
+  i <- i[2]
+  i <- substr(i, 3, nchar(i))
+  
+  if(i %in% ad)
+  {
+    ad_copy2 <- c(ad_copy2, file)
+  }
+  
+  else if(i %in% cn)
+  {
+    cn_copy2 <- c(cn_copy2, file)
+  }
+  
+  else if(i %in% mci)
+  {
+    mci_copy2 <- c(mci_copy2, file)
+  }
+}
+file.copy(ad_copy2, ad_dir)
+file.copy(cn_copy2, cn_dir)
 ############################################# Finished ############################################################3
 
+####################### Extract subject IDs #########################3
+setwd("~/AD/ADNI/ADNI_1_5_T_ALL/")
+files <- list.files()
+
+ad <- data_all %>% filter(str_detect(Screen.Diagnosis, "AD"))
+
+length(unique(ad$PTID))
+
+sub_ids <- c()
+
+for (sub in files)
+{
+  sub <- str_match(sub, "ADNI_(\\d*_S_\\d*)")
+  sub_ids <- c(sub_ids, sub[2])
+}
+
+ad_s <- c()
+ad_s <- sub_ids[sub_ids %in% ad$PTID]
+length(unique(ad_s))
+####################### Extract subject IDs #########################3

@@ -7,7 +7,7 @@ library(stringr)
 library(EBImage)
 library(SpatialPack)
 
-setwd("/home/dthomas/AD/")
+setwd("/home/dthomas/AD/3T/")
 registerDoParallel(16)
 
 ad <- list.files("3T_extracted_ad/")
@@ -20,7 +20,7 @@ image_has_pixels_over_zero <- function(file_path)
 }
 
 
-setwd("/home/dthomas/AD/3T_extracted_ad/")
+setwd("/home/dthomas/AD/3T/3T_extracted_ad/")
 start_time_ad <- Sys.time()
 foreach(nifti_file_name = ad) %dopar%
   {
@@ -52,7 +52,7 @@ end_time_ad <- Sys.time()
 
 gc()
 start_time_cn <- Sys.time()
-setwd("/home/dthomas/AD/3T_extracted_cn/")
+setwd("/home/dthomas/AD/3T/3T_extracted_cn/")
 foreach(nifti_file_name = cn) %dopar%
   {
     t1 <- readnii(paste(nifti_file_name))

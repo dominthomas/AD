@@ -1,6 +1,10 @@
 library(shiny)
 library(oro.nifti)
-
+library(png)
+library(shinycssloaders)
+library(keras)
+library(imager)
+library(abind)
 
 # @author dthomas
 # @version 1.0
@@ -25,7 +29,9 @@ ui <- fluidPage(
     #Add slider inputs with arbitrary min/max values 
     sliderInput('slider_x', 'X orientation', min=1, max=10, value=5),
     sliderInput('slider_y', 'Y orientation', min=1, max=10, value=5),
-    sliderInput('slider_z', 'Z orientation', min=1, max=10, value=5)
+    sliderInput('slider_z', 'Z orientation', min=1, max=10, value=5),
+    tags$br(),
+    h3(textOutput("diagnosis_prediction"))
   ),
   
   
@@ -33,15 +39,17 @@ ui <- fluidPage(
   mainPanel(
     h5('Plane View'),
     tabsetPanel(type = "tabs", 
-                tabPanel("Axial", plotOutput("Axial", height = "450px",   brush = "plot_brush")), 
-                tabPanel("Sagittal", plotOutput("Sagittal", height = "450px",   brush = "plot_brush")), 
-                tabPanel("Coronal", plotOutput("Coronal", height = "450px",   brush = "plot_brush"))
+                tabPanel("Axial", withSpinner(plotOutput("Axial", height = "450px",   brush = "plot_brush")), type = 1), 
+                tabPanel("Sagittal", withSpinner(plotOutput("Sagittal", height = "450px",   brush = "plot_brush")), type = 1), 
+                tabPanel("Coronal", withSpinner(plotOutput("Coronal", height = "450px",   brush = "plot_brush")), type = 1)
     ),
     plotOutput("orthographic")
   )
 )
 
 server <- function(input, output, session) {
+  
+  model <- load_model_hdf5("~/AD/final_model.h5")
   # Reactive for niftiFiles.
   niftiImage <- reactive({
     
@@ -53,6 +61,7 @@ server <- function(input, output, session) {
     # Read nifti image from datapath of temporary file; 
     # created when user uploaded the nifti.
     readNIfTI(input$niftiFile$datapath, reorient = FALSE, verbose = TRUE)
+    
   })
   
   observe({
@@ -87,12 +96,119 @@ server <- function(input, output, session) {
                  col = gray(0:64/64)
     ))
   })
+  
+  observe({
+    t1 <- niftiImage()
+    
+    if(!is.null(t1))
+    {
+      if(dir.exists("current_nifti"))
+      {
+        unlink("current_nifti", recursive = TRUE)
+      }
+      dir.create("current_nifti")
+      
+      for(slice_num in 1:dim(t1)[2])
+      {
+        full_path <- paste("current_nifti", "/", slice_num, ".png", sep="")
+        png(filename = full_path)
+        image(t1, z = slice_num, plot.type="single", plane="coronal")
+        dev.off()     
+        
+        if(image_has_pixels_over_zero(full_path))
+        {
+          next
+        }
+        else
+        {
+          file.remove(full_path)
+        }
+      }
+    }
+  })
+  
+  prediction <- reactive({
+    t1 <- niftiImage()
+    print("I'm here")
+    if(dir.exists("current_nifti"))
+    {
+      setwd("current_nifti")
+      files <- list.files(".")
+      file_num_only <- c()
+      
+      for (file in files)
+      {
+        file_num_only <- c(file_num_only, str_extract(file, '(\\d*)'))
+      }
+      
+      file_num_only <- sort(as.numeric(file_num_only))
+      png <- paste(file_num_only[88], ".png", sep = "") %>%
+        load.image()
+      
+      setwd("../")
+      
+      png <- png %>%
+        autocrop(c(0, 0, 0)) %>%
+        resize(w = 227, h = 227)
+      
+      png <- png[, , , 1]
+      dim(png) <- c(227, 227, 1)
+      l <- list()
+      l <- append(l, list(png))
+      l <- abind(l, along = 0)
+      a <- predict(model, l)
+      print(a)
+      class(a)
+      print(a[1])
+      if(a == 0)
+      {
+        print("Hello")
+      }
+      return(predict(model, l))
+    }
+  })
+  
+  output$diagnosis_prediction <- renderText({
+    try(
+      if(!is.null(prediction()))
+      {
+        if(prediction() == 0)
+        {
+          return("Cognitively Normal")
+        } 
+        else 
+        {
+          return("Alzheimer's Demented")
+        }
+      }
+    )
+  })
+  
+  observe({
+    if(!is.null(prediction()))
+    {
+      print(prediction())
+    }
+  })
+  
+  image_has_pixels_over_zero <- function(file_path)
+  {
+    img <- readPNG(file_path)
+    return(any(img > 0))
+  }
  
-  # End the shiny session when the app closes. 
+# End the shiny session when the app closes. 
 #  session$onSessionEnded(function() { 
 #    stopApp()
 #    q("no") 
 #  })
+  
+  onStop(function() {
+    if(dir.exists("current_nifti"))
+    {
+      unlink("current_nifti", recursive = TRUE)
+    }
+  })
   
   # TODO remove - for debugging.
   observe({

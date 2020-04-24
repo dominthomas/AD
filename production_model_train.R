@@ -1,0 +1,315 @@
+library(stringr)
+library(tensorflow)
+library(keras)
+library(abind)
+library(imager)
+library(EBImage)
+#library(SpatialPack)
+
+
+
+########################################################
+  folders_ad <- list.files("/home/dthomas/AD/2D/AD/")
+  folders_cn <- list.files("/home/dthomas/AD/2D/CN/")
+  
+  sub_id_ad <- c()
+  sub_id_cn <- c()
+  
+  for (folder in folders_ad)
+  {
+    sub_id <- str_extract(folder, "OAS\\d*")
+    if (!(sub_id %in% sub_id_ad))
+    {
+      sub_id_ad <- c(sub_id_ad, sub_id)
+    }
+  }
+  
+  for (folder in folders_cn)
+  {
+    sub_id <- str_extract(folder, "OAS\\d*")
+    if (!(sub_id %in% sub_id_cn))
+    {
+      sub_id_cn <- c(sub_id_cn, sub_id)
+    }
+  }
+  
+  # Confirm there are no overlapping subjects.
+  any(duplicated(sub_id_cn, sub_id_ad))
+  # 178 AD subjects.
+  # 588 CN subjects.
+  ########################################################
+  
+  get_images <- function(folders, train = FALSE, same_length = FALSE, data_length = 0, adni = FALSE)
+  {
+    # Since three slices are used as default, without image augmentation.
+    data_length <- data_length*3
+    
+    return_list <- list()
+    
+    for (folder in folders)
+    {
+      if(same_length && length(return_list) == data_length)
+      {
+        break
+      }
+      setwd(folder)
+      files <- list.files(".")
+      file_num_only <- c()
+      
+      for (file in files)
+      {
+        file_num_only <- c(file_num_only, str_extract(file, '(\\d*)'))
+      }
+      
+      file_num_only <- sort(as.numeric(file_num_only))
+      png <- paste(file_num_only[88], ".png", sep = "") %>%
+        load.image()
+      png2 <- paste(file_num_only[87], ".png", sep = "") %>%
+        load.image()
+      png3 <- paste(file_num_only[89], ".png", sep = "") %>%
+        load.image()
+      
+      if(adni){
+        
+        png <- imrotate(png, angle = 90)
+        png2 <- imrotate(png2, angle = 90)
+        png3 <- imrotate(png3, angle = 90)
+        
+      }
+      
+      if (train)
+      {
+        png_rotate <- imrotate(png, angle = 3) %>%
+          autocrop(c(0, 0, 0)) %>%
+          resize(w = 227, h = 227)
+        gray2 <- png_rotate[, , , 1]
+        dim(gray2) <- c(227, 227, 1)
+        return_list <- append(return_list, list(gray2))
+        
+        png_rotate <- imrotate(png, angle = -4) %>%
+          autocrop(c(0, 0, 0)) %>%
+          resize(w = 227, h = 227)
+        gray2 <- png_rotate[, , , 1]
+        dim(gray2) <- c(227, 227, 1)
+        return_list <- append(return_list, list(gray2))
+        
+        png_rotate <- imrotate(png2, angle = 3) %>%
+          autocrop(c(0, 0, 0)) %>%
+          resize(w = 227, h = 227)
+        gray2 <- png_rotate[, , , 1]
+        dim(gray2) <- c(227, 227, 1)
+        return_list <- append(return_list, list(gray2))
+        
+        png_rotate <- imrotate(png2, angle = -4) %>%
+          autocrop(c(0, 0, 0)) %>%
+          resize(w = 227, h = 227)
+        gray2 <- png_rotate[, , , 1]
+        dim(gray2) <- c(227, 227, 1)
+        return_list <- append(return_list, list(gray2))
+        
+        png_rotate <- imrotate(png3, angle = 3) %>%
+          autocrop(c(0, 0, 0)) %>%
+          resize(w = 227, h = 227)
+        gray2 <- png_rotate[, , , 1]
+        dim(gray2) <- c(227, 227, 1)
+        return_list <- append(return_list, list(gray2))
+        
+        png_rotate <- imrotate(png3, angle = -4) %>%
+          autocrop(c(0, 0, 0)) %>%
+          resize(w = 227, h = 227)
+        gray2 <- png_rotate[, , , 1]
+        dim(gray2) <- c(227, 227, 1)
+        return_list <- append(return_list, list(gray2))
+        
+      }
+      png <- png %>%
+        autocrop(c(0, 0, 0)) %>%
+        resize(w = 227, h = 227)
+      
+      gray <- png[, , , 1]
+      dim(gray) <- c(227, 227, 1)
+      return_list <- append(return_list, list(gray))
+      
+      png <- png2 %>%
+        autocrop(c(0, 0, 0)) %>%
+        resize(w = 227, h = 227)
+      
+      gray <- png[, , , 1]
+      dim(gray) <- c(227, 227, 1)
+      return_list <- append(return_list, list(gray))
+      
+      png <- png3 %>%
+        autocrop(c(0, 0, 0)) %>%
+        resize(w = 227, h = 227)
+      
+      gray <- png[, , , 1]
+      dim(gray) <- c(227, 227, 1)
+      return_list <- append(return_list, list(gray))
+      
+      setwd("../")
+    }
+    return(return_list)
+  }
+  
+  setwd("/home/dthomas/AD/2D/AD/")
+  folders <- list.files(".")
+  
+  # Shuffle
+  ad_train <- get_images(folders, TRUE)
+  
+  setwd("/home/dthomas/AD/2D/CN/")
+  folders <- list.files(".")
+  # Shuffle
+  sub_id_cn <- sample(sub_id_cn)
+  
+  setwd("/home/dthomas/AD/2D/CN/")
+  cn_train <- get_images(folders, TRUE)
+  
+  ############ADNI Data Set, all data will be used for training############
+  adni_folders_ad <- list.files("/home/dthomas/AD/ADNI/2D/AD_3T/")
+  adni_folders_cn <- list.files("/home/dthomas/AD/ADNI/2D/CN_3T/")
+  
+  setwd("/home/dthomas/AD/ADNI/2D/AD_3T/")
+  adni_ad_train <- get_images(adni_folders_ad, train = TRUE, adni = TRUE)
+  setwd("/home/dthomas/AD/ADNI/2D/CN_3T/")
+  adni_cn_train <- get_images(adni_folders_cn, train = TRUE, adni = TRUE)
+  
+  train_data <- cn_train
+  train_data <- append(train_data, ad_train)
+  train_data <- append(train_data, adni_cn_train)
+  train_data <- append(train_data, adni_ad_train)
+  
+  # Create labels for train data.
+  x <- rep('0', length(cn_train)) # CN
+  y <- rep('1', length(ad_train)) # AD
+  x2 <- rep('0', length(adni_cn_train)) # CN
+  y2 <- rep('1', length(adni_ad_train)) # AD
+  train_labels <- c(x, y, x2, y2)
+  
+  
+  train_labels <- as.numeric(train_labels)
+  
+  # Turn train_data & test_data into a 5D array from a list of 4D arrays.
+  train_data <- abind(train_data, along = 0)
+  
+  # Remove unwanted data.
+  remove(cn_train,
+         ad_train,
+         folder,
+         folders,
+         x,
+         y,
+         x2,
+         y2,
+         adni_cn_train,
+         adni_ad_train)
+ gc()
+  
+  #tb_log <- "tb_log"
+  #tensorboard(tb_log)
+  
+  # Create sequential model
+  model <- keras_model_sequential()
+  
+  model %>% layer_conv_2d(
+    filters = 32,
+    kernel_size = c(7, 7),
+    input_shape = c(227, 227, 1),
+    strides = c(4, 4),
+    padding = "valid",
+    data_format = 'channels_last',
+    activation = 'relu') %>%
+    layer_max_pooling_2d(pool_size = c(2, 2),
+                         strides = c(2, 2),
+                         padding = "valid") %>%
+    
+    layer_conv_2d(
+      filters = 64,
+      kernel_size = c(5, 5),
+      strides = c(1, 1),
+      padding = "valid",
+      activation = "relu"
+    ) %>%
+    layer_max_pooling_2d(pool_size = c(2, 2),
+                         strides = c(2, 2),
+                         padding = "valid") %>%
+    
+    layer_conv_2d(
+      filters = 384,
+      kernel_size = c(3, 3),
+      strides = c(1, 1),
+      padding = "valid",
+      activation = "relu"
+    ) %>%
+    
+    layer_conv_2d(
+      filters = 384,
+      kernel_size = c(3, 3),
+      strides = c(1, 1),
+      padding = "valid",
+      activation = "relu"
+    ) %>% 
+    
+    layer_conv_2d(
+      filters = 512,
+      kernel_size = c(3, 3),
+      strides = c(1, 1),
+      padding = "valid",
+      activation = "relu"
+    ) %>%
+    
+    layer_conv_2d(
+      filters = 256,
+      kernel_size = c(3, 3),
+      strides = c(1, 1),
+      padding = "valid",
+      activation = "relu"
+    ) %>%
+    layer_max_pooling_2d(pool_size = c(2, 2),
+                         strides = c(2, 2),
+                         padding = "valid") %>%
+    
+    layer_flatten() %>%
+    #layer_dense(units = 4096, activation = "relu") %>%
+    #layer_dropout(rate = 0.4) %>%
+    
+    #layer_dense(units = 4096, activation = "relu") %>%
+    #layer_dropout(rate = 0.4) %>%
+    
+    #layer_dense(units = 1000, activation = "relu") %>%
+    #layer_dropout(rate = 0.4) %>%
+    layer_dense(units = 32, activation = "relu") %>%
+    
+    layer_dense(units = 1, activation = 'sigmoid')
+  
+  # Compile
+  model %>%
+    compile(loss = 'binary_crossentropy',
+            #optimizer = optimizer_sgd(lr = 0.015,
+            #                          momentum = 0.9,
+            #                          decay = 0.0005,
+            #                          nesterov = T),
+            optimizer = "adam",
+            metrics = 'accuracy')
+  
+  # Fit model
+  history <- model %>%
+    fit(
+      train_data,
+      train_labels,
+      epoch = 50,
+      batch_size = 1000,
+      shuffle = TRUE
+      #callbacks = c(callback_tensorboard(
+      #  log_dir = tb_log,
+      #  embeddings_freq = 1,
+      #  histogram_freq = 1
+      #))
+    )
+  
+  remove(train_data)
+
+setwd("~/AD")
+
+model %>% save_model_hdf5("final_model.h5")
+nm <- load_model_hdf5("final_model.h5")

@@ -226,12 +226,12 @@ cn_validate <- get_images(cn_sub_validate_folders, same_length = TRUE, data_leng
 cn_test <- get_images(cn_sub_test_folders, same_length = TRUE, data_length = 8)
 
 ############ADNI Data Set, all data will be used for training############
-adni_folders_ad <- list.files("/home/dthomas/AD/ADNI/2D/AD/")
-adni_folders_cn <- list.files("/home/dthomas/AD/ADNI/2D/CN/")
+adni_folders_ad <- list.files("/home/dthomas/AD/ADNI/2D/AD_3T/")
+adni_folders_cn <- list.files("/home/dthomas/AD/ADNI/2D/CN_3T/")
 
-setwd("/home/dthomas/AD/ADNI/2D/AD/")
+setwd("/home/dthomas/AD/ADNI/2D/AD_3T/")
 adni_ad_train <- get_images(adni_folders_ad, train = TRUE, adni = TRUE)
-setwd("/home/dthomas/AD/ADNI/2D/CN/")
+setwd("/home/dthomas/AD/ADNI/2D/CN_3T/")
 adni_cn_train <- get_images(adni_folders_cn, train = TRUE, adni = TRUE)
 
 train_data <- cn_train
@@ -407,7 +407,7 @@ history <- model %>%
     train_data,
     train_labels,
     epoch = 50,
-    batch_size = 400,
+    batch_size = 1000,
     validation_data = list(validation_data, validation_labels),
     shuffle = TRUE
     #callbacks = c(callback_tensorboard(
@@ -427,7 +427,7 @@ loss <- c(loss, evaluation[[1]])
 accuracy <- c(accuracy, evaluation[[2]])
 
 print(mean(accuracy))
-write(evaluation[[2]], file="/home/dthomas/accuracy.txt", append = TRUE)
+write(evaluation[[2]], file="/home/dthomas/R_accuracy.txt", append = TRUE)
 
 remove(train_data, validation_data, test_data, model)
 gc()
