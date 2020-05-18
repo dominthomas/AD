@@ -31,7 +31,7 @@ ui <- fluidPage(
       placeholder = "No file selected"
     ),
     
-    #Add slider inputs with arbitrary min/max values 
+    # Add slider inputs with arbitrary min/max values 
     sliderInput('slider_x', 'X orientation', min=1, max=10, value=5),
     sliderInput('slider_y', 'Y orientation', min=1, max=10, value=5),
     sliderInput('slider_z', 'Z orientation', min=1, max=10, value=5),
